@@ -7,6 +7,7 @@ def read_csv_to_dict(csv_file):
     with open(csv_file, 'r', encoding='utf-8-sig') as file:
         # We are using DictReader method
         reader = csv.DictReader(file)
+        # We are taking care of each row
         for row in reader:
             mandarin = row['Mandarin']
             cantonese = row['Cantonese']
