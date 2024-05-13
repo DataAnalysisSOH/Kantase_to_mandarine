@@ -2,6 +2,7 @@ import csv
 
 # We are define an function to read csv file and turn into dictionary
 def read_csv_to_dict(csv_file):
+    # create a empty dictionary to store
     mandarin_cantonese_dict = {}
     # we are open the csv file
     with open(csv_file, 'r', encoding='utf-8-sig') as file:
