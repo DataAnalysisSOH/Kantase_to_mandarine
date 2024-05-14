@@ -24,13 +24,24 @@ def read_txt_to_string(txt_file):
             articles += line
     # We are Return the concatenated string containing the contents of the file
     return articles
+# We are creating another function to replace words in the article
+def replace_names(articles, mandarin_cantonese_dict):
+    for original, new in mandarin_cantonese_dict.items():
+        articles = articles.replace(original,new)
+    return articles
+        
 # We are define the main method
 def main():
     # We are defining the csv_file path
     csv_file = 'Mandarin to Cantonese - Sheet1.csv'
     mandarin_cantonese_dict = read_csv_to_dict(csv_file)
+    text_file = 'article.txt'
+    article = read_txt_to_string(text_file)
+    modified_article = replace_names(article,mandarin_cantonese_dict)
     # We are printing out to check the result
     print(mandarin_cantonese_dict)
+    print(article)
+    print(modified_article)
     
     
 # We are define the entrypoint of the function
