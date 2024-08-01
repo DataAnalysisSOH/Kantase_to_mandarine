@@ -39,7 +39,7 @@ def main():
     article = read_txt_to_string(text_file)
     modified_article = replace_names(article,mandarin_cantonese_dict)
     # We are printing out to check the result
-    print(mandarin_cantonese_dict)
+    # print(mandarin_cantonese_dict)
     print(article)
     print(modified_article)
     
