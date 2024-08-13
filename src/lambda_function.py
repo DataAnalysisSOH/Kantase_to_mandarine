@@ -1,13 +1,11 @@
 import base64
 import boto3
-import cgi
 import json
 import gspread
 import re
 
-from bs4 import BeautifulSoup
 from oauth2client.service_account import ServiceAccountCredentials
-from urllib.parse import unquote
+from urllib.parse import unquote_plus
 
 
 APP_NAME = 'Mandarin Cantonese Translator'
@@ -31,15 +29,6 @@ def extract_spreadsheet_id(url):
         return match.group(1)
     else:
         return None
-    
-
-def HTMLEntitiesToUnicode(html_string):
-    """Converts HTML entities to unicode.  For example '&amp;' becomes '&'."""
-    # Parse the HTML string with BeautifulSoup
-    soup = BeautifulSoup(html_string, "html.parser")
-    # Convert to a Unicode string
-    unicode_string = soup.get_text()
-    return unicode_string
 
 
 def lambda_handler(event, context):
@@ -72,6 +61,7 @@ def lambda_handler(event, context):
         <html>
         <head>
             <title>{APP_NAME}</title>
+            <meta content="text/html; charset=utf-8" http-equiv="content-type"/>
         </head>
         <body>
             <h1>{APP_NAME}</h1>
@@ -107,17 +97,13 @@ def lambda_handler(event, context):
         if IS_DEBUGGING:
             print(f"Decoded request body: {decoded_body}")
         
-        parsed_body = unquote(decoded_body)
+        parsed_body = unquote_plus(decoded_body)
         if IS_DEBUGGING:
             print(f"Parsed request body: {parsed_body}")
         
-        unicode_body = HTMLEntitiesToUnicode(parsed_body)
-        if IS_DEBUGGING:
-            print(f"Unicoded request body: {unicode_body}")
-
         # Split request payload body using '=' because form values 
         # comes in as pairs and each pair is connected by '='
-        input_text = unicode_body.split('=')[1] if unicode_body else ''
+        input_text = parsed_body.split('=')[1] if parsed_body else ''
         
         original_lines = input_text.splitlines()
         original_html_lines = []
