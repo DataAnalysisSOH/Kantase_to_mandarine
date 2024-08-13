@@ -1,11 +1,13 @@
 import base64
 import boto3
+import cgi
 import json
 import gspread
 import re
-import urllib.parse
 
+from bs4 import BeautifulSoup
 from oauth2client.service_account import ServiceAccountCredentials
+from urllib.parse import unquote
 
 
 APP_NAME = 'Mandarin Cantonese Translator'
@@ -30,6 +32,15 @@ def extract_spreadsheet_id(url):
     else:
         return None
     
+
+def HTMLEntitiesToUnicode(html_string):
+    """Converts HTML entities to unicode.  For example '&amp;' becomes '&'."""
+    # Parse the HTML string with BeautifulSoup
+    soup = BeautifulSoup(html_string, "html.parser")
+    # Convert to a Unicode string
+    unicode_string = soup.get_text()
+    return unicode_string
+
 
 def lambda_handler(event, context):
     print (f"{APP_NAME} starts ...")
@@ -65,8 +76,8 @@ def lambda_handler(event, context):
         <body>
             <h1>{APP_NAME}</h1>
             <form action="/mandarin-cantonese-translator" method="post">
-                <textarea name="input_text" rows="10" cols="30"></textarea><br><br>
-                <input type="submit" value="Submit">
+                <textarea name="input_text" rows="20" cols="60"></textarea><br><br>
+                <input type="submit" value="Convert">
             </form>
         </body>
         </html>
@@ -89,24 +100,33 @@ def lambda_handler(event, context):
         # Check if the body is base64 encoded
         if event.get('isBase64Encoded', False):
             # Decode the base64-encoded body
-            body = base64.b64decode(event_body).decode('utf-8')
+            decoded_body = base64.b64decode(event_body).decode('utf-8')
         else:
-            body = event['body']
+            decoded_body = event['body']
         
         if IS_DEBUGGING:
-            print(f"Decoded request body: {body}")
+            print(f"Decoded request body: {decoded_body}")
         
-        parsed_body = urllib.parse.parse_qs(body)
-        
+        parsed_body = unquote(decoded_body)
         if IS_DEBUGGING:
             print(f"Parsed request body: {parsed_body}")
         
-        # Get input text. If no 'input_text' found use default value ['']
-        input_text = parsed_body.get('input_text', [''])[0]
+        unicode_body = HTMLEntitiesToUnicode(parsed_body)
+        if IS_DEBUGGING:
+            print(f"Unicoded request body: {unicode_body}")
+
+        # Split request payload body using '=' because form values 
+        # comes in as pairs and each pair is connected by '='
+        input_text = unicode_body.split('=')[1] if unicode_body else ''
         
-        # Count the number of characters in the text
-        char_count = len(input_text)
-        
+        original_lines = input_text.splitlines()
+        original_html_lines = []
+        for text_line in original_lines:
+            if len(text_line) == 0:
+                continue
+            html_line = f"<p>{text_line}</p>"
+            original_html_lines.append(html_line)
+
         # Replace text using mappings specified in the Google Sheet
         spreadsheet_id = extract_spreadsheet_id(GOOGLE_SPREAD_SHEET_URL)
         # Access the Google Sheet by Spreadsheet ID
@@ -131,22 +151,41 @@ def lambda_handler(event, context):
         for mapping in records:
             mandarin = mapping['Mandarin']
             cantonese = mapping['Cantonese']
+            if IS_DEBUGGING:
+                print(f"replacing {mandarin} with {cantonese}")
             replaced_text = replaced_text.replace(mandarin, cantonese)
-        
-        replaced_text.replace('\n', '<br/>')
 
+        if IS_DEBUGGING:
+            print(f"Replaced outcome: {replaced_text}")
+
+        replaced_text_lines = replaced_text.splitlines()
+        replaced_text_html_lines = []
+        for text_line in replaced_text_lines:
+            if len(text_line) == 0:
+                continue
+            html_line = f"<p>{text_line}</p>"
+            replaced_text_html_lines.append(html_line)
+        
         # Return the result
         result_content = f"""
         <!DOCTYPE html>
         <html>
         <head>
             <title>{APP_NAME}</title>
+            <meta content="text/html; charset=utf-8" http-equiv="content-type"/>
         </head>
         <body>
             <h1>{APP_NAME}</h1>
-            <p>The text you entered has {char_count} characters.</p>
-            <h2>Replaced text</h2>
-            <p>{replaced_text}</p>
+            <div style="display: flex">
+                <div style="width: 50%">
+                    <h2>Original input</h2>
+                    {''.join(original_html_lines)}
+                </div>
+                <div style="width: 50%">
+                    <h2>Convert outcome</h2>
+                    {''.join(replaced_text_html_lines)}
+                </div>
+            </div>
             <a href="/mandarin-cantonese-translator">Back</a>
         </body>
         </html>
