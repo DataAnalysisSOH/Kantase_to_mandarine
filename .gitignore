@@ -1,4 +1,6 @@
+.DS_Store
 .dist
 .venv
 .credentials
 .workbench
+.test_files
