@@ -9,8 +9,14 @@ from urllib.parse import unquote_plus
 
 
 APP_NAME = 'Mandarin Cantonese Translator'
-GOOGLE_SERVICE_ACCOUNT_SECRET_NAME = 'dev/ygtq/mandarin_cantonese_translator'
-GOOGLE_SPREAD_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1CxDhoWYiTjSeOXMotycxmltDYxbafflghAEM6En0K9g/edit?gid=0#gid=0'
+# DEV Secrets Name
+# GOOGLE_SERVICE_ACCOUNT_SECRET_NAME = 'dev/ygtq/mandarin_cantonese_translator'
+# PROD Secrets Name
+GOOGLE_SERVICE_ACCOUNT_SECRET_NAME = 'prod/ygtq/mandarin_cantonese_translator'
+# DEV Google Sheet
+# GOOGLE_SPREAD_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1CxDhoWYiTjSeOXMotycxmltDYxbafflghAEM6En0K9g/edit?gid=0#gid=0'
+# PROD Google Sheet
+GOOGLE_SPREAD_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1qCKGH5uNXkfn3L6XqwUPNhTYQhHE3r7r4PGiB21aEPo/edit?gid=0#gid=0'
 GOOGLE_SHEET_NAME = 'Mappings'
 IS_DEBUGGING = False
 
@@ -134,7 +140,7 @@ def lambda_handler(event, context):
             #     {'Mandarin': '这里', 'Cantonese': '呢度'},
             #     {'Mandarin': '为什么', 'Cantonese': '点解'}
             # ]
-            
+
         replaced_text = parsed_input
         for mapping in records:
             mandarin = mapping['Mandarin']
