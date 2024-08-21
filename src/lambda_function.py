@@ -14,7 +14,7 @@ APP_NAME = 'Mandarin Cantonese Translator'
 # PROD Secrets Name
 GOOGLE_SERVICE_ACCOUNT_SECRET_NAME = 'prod/ygtq/mandarin_cantonese_translator'
 # DEV Google Sheet
-# GOOGLE_SPREAD_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1CxDhoWYiTjSeOXMotycxmltDYxbafflghAEM6En0K9g/edit?gid=0#gid=0'
+# GOOGLE_SPREAD_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1SQ9bwDUxXbU6q8njvg4wtXBdJDAp7wJskApnDuS6vYY/edit?gid=0#gid=0'
 # PROD Google Sheet
 GOOGLE_SPREAD_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1qCKGH5uNXkfn3L6XqwUPNhTYQhHE3r7r4PGiB21aEPo/edit?gid=0#gid=0'
 GOOGLE_SHEET_NAME = 'Mappings'
