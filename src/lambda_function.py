@@ -12,7 +12,7 @@ APP_NAME = 'Mandarin Cantonese Translator'
 GOOGLE_SERVICE_ACCOUNT_SECRET_NAME = 'dev/ygtq/mandarin_cantonese_translator'
 GOOGLE_SPREAD_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1CxDhoWYiTjSeOXMotycxmltDYxbafflghAEM6En0K9g/edit?gid=0#gid=0'
 GOOGLE_SHEET_NAME = 'Mappings'
-IS_DEBUGGING = True
+IS_DEBUGGING = False
 
 
 def extract_spreadsheet_id(url):
@@ -65,6 +65,9 @@ def lambda_handler(event, context):
         </head>
         <body>
             <h1>{APP_NAME}</h1>
+            <div>
+                <a href="{GOOGLE_SPREAD_SHEET_URL}" target="_blank">Translation Config</a>
+            </div>
             <form action="/mandarin-cantonese-translator" method="post">
                 <textarea name="input_text" rows="20" cols="60"></textarea><br><br>
                 <input type="submit" value="Convert">
@@ -97,15 +100,15 @@ def lambda_handler(event, context):
         if IS_DEBUGGING:
             print(f"Decoded request body: {decoded_body}")
         
-        parsed_body = unquote_plus(decoded_body)
-        if IS_DEBUGGING:
-            print(f"Parsed request body: {parsed_body}")
-        
         # Split request payload body using '=' because form values 
         # comes in as pairs and each pair is connected by '='
-        input_text = parsed_body.split('=')[1] if parsed_body else ''
+        input_text = decoded_body.split('=')[1] if decoded_body else ''
         
-        original_lines = input_text.splitlines()
+        parsed_input = unquote_plus(input_text)
+        if IS_DEBUGGING:
+            print(f"Parsed request body: {parsed_input}")
+        
+        original_lines = parsed_input.splitlines()
         original_html_lines = []
         for text_line in original_lines:
             if len(text_line) == 0:
@@ -123,8 +126,7 @@ def lambda_handler(event, context):
         records = worksheet.get_all_records()
 
         if IS_DEBUGGING:
-            print("Madarin Cantonese Mappings")
-            print(records)
+            print(f"Retrieved {len(records)} lines of Madarin Cantonese Mappings")
             # Example:
             # [
             #     {'Mandarin': '早上好', 'Cantonese': '早晨'},
@@ -132,13 +134,11 @@ def lambda_handler(event, context):
             #     {'Mandarin': '这里', 'Cantonese': '呢度'},
             #     {'Mandarin': '为什么', 'Cantonese': '点解'}
             # ]
-
-        replaced_text = input_text
+            
+        replaced_text = parsed_input
         for mapping in records:
             mandarin = mapping['Mandarin']
             cantonese = mapping['Cantonese']
-            if IS_DEBUGGING:
-                print(f"replacing {mandarin} with {cantonese}")
             replaced_text = replaced_text.replace(mandarin, cantonese)
 
         if IS_DEBUGGING:
@@ -161,18 +161,39 @@ def lambda_handler(event, context):
             <meta content="text/html; charset=utf-8" http-equiv="content-type"/>
         </head>
         <body>
-            <h1>{APP_NAME}</h1>
+            <div style="display: flex; flex-direction: column;">
+                <a href="/mandarin-cantonese-translator">&lt;&lt; Back</a>
+                <h1 style="margin-top: 0.25rem">{APP_NAME}</h1>
+            </div>
+            <div>
+                <a href="{GOOGLE_SPREAD_SHEET_URL}" target="_blank">Translation Config</a>
+            </div>
             <div style="display: flex">
-                <div style="width: 50%">
+                <div style="width: 50%; overflow: hidden; padding: 0 1rem 1rem; margin: 1rem; border: solid 1px #ccc;">
                     <h2>Original input</h2>
+                    <button onclick="copyToClipboard('input')">Copy input</button>
+                    <div id="input">
                     {''.join(original_html_lines)}
+                    </div>
                 </div>
-                <div style="width: 50%">
+                <div style="width: 50%; overflow: hidden; padding: 0 1rem 1rem; margin: 1rem; border: solid 1px #ccc;">
                     <h2>Convert outcome</h2>
+                    <button onclick="copyToClipboard('output')">Copy outcome</button>
+                    <div id="output">
                     {''.join(replaced_text_html_lines)}
+                    </div>
                 </div>
             </div>
-            <a href="/mandarin-cantonese-translator">Back</a>
+            <script>
+                function copyToClipboard(elementId) {{
+                    var range = document.createRange();
+                    range.selectNode(document.getElementById(elementId));
+                    window.getSelection().removeAllRanges(); // clear current selection
+                    window.getSelection().addRange(range); // to select text
+                    document.execCommand("copy");
+                    window.getSelection().removeAllRanges();// to deselect
+                }}
+            </script>
         </body>
         </html>
         """
