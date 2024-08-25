@@ -10,14 +10,15 @@ from urllib.parse import unquote_plus
 
 APP_NAME = 'Mandarin Cantonese Translator'
 # DEV Secrets Name
-# GOOGLE_SERVICE_ACCOUNT_SECRET_NAME = 'dev/ygtq/mandarin_cantonese_translator'
+GOOGLE_SERVICE_ACCOUNT_SECRET_NAME = 'dev/ygtq/mandarin_cantonese_translator'
 # PROD Secrets Name
-GOOGLE_SERVICE_ACCOUNT_SECRET_NAME = 'prod/ygtq/mandarin_cantonese_translator'
+# GOOGLE_SERVICE_ACCOUNT_SECRET_NAME = 'prod/ygtq/mandarin_cantonese_translator'
 # DEV Google Sheet
-# GOOGLE_SPREAD_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1SQ9bwDUxXbU6q8njvg4wtXBdJDAp7wJskApnDuS6vYY/edit?gid=0#gid=0'
+GOOGLE_SPREAD_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1SQ9bwDUxXbU6q8njvg4wtXBdJDAp7wJskApnDuS6vYY/edit?gid=0#gid=0'
 # PROD Google Sheet
-GOOGLE_SPREAD_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1qCKGH5uNXkfn3L6XqwUPNhTYQhHE3r7r4PGiB21aEPo/edit?gid=0#gid=0'
+# GOOGLE_SPREAD_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1qCKGH5uNXkfn3L6XqwUPNhTYQhHE3r7r4PGiB21aEPo/edit?gid=0#gid=0'
 GOOGLE_SHEET_NAME = 'Mappings'
+DEPLOYMENT_TARGET = 'DEV'
 IS_DEBUGGING = False
 
 
@@ -60,6 +61,35 @@ def lambda_handler(event, context):
     # 1. Make sure we get the HTTP method used by the requester
     print(f"HTTP method: {http_method}")
     
+    app_heading_html_content = f"""
+        <div style="display: flex; flex-direction: column;">
+            {
+                """
+                <a href="/mandarin-cantonese-translator">&lt;&lt; Back</a>
+                """ if http_method == 'POST' else ''
+            }
+            <h1>
+                {APP_NAME}
+                {
+                    """
+                    <span style="color: #f57e42;">(deprecated)</span>
+                    """ if DEPLOYMENT_TARGET != 'PROD' else ''
+                }
+            </h1>
+        </div>
+        {
+            """
+            <div style="color: #f57e42;">
+            Please use the new site with this link:
+            <a href="https://gvpun3viu9.execute-api.us-east-1.amazonaws.com/mandarin-cantonese-translator">https://gvpun3viu9.execute-api.us-east-1.amazonaws.com/mandarin-cantonese-translator</a>
+            </div>
+            """ if DEPLOYMENT_TARGET != 'PROD' else ''
+        }
+        <div>
+            <a href="{GOOGLE_SPREAD_SHEET_URL}" target="_blank">Translation Config</a>
+        </div>
+    """
+
     if http_method == 'GET':
         # Return the HTML form
         html_content = f"""
@@ -70,10 +100,7 @@ def lambda_handler(event, context):
             <meta content="text/html; charset=utf-8" http-equiv="content-type"/>
         </head>
         <body>
-            <h1>{APP_NAME}</h1>
-            <div>
-                <a href="{GOOGLE_SPREAD_SHEET_URL}" target="_blank">Translation Config</a>
-            </div>
+            {app_heading_html_content}
             <form action="/mandarin-cantonese-translator" method="post">
                 <textarea name="input_text" rows="20" cols="60"></textarea><br><br>
                 <input type="submit" value="Convert">
@@ -167,13 +194,7 @@ def lambda_handler(event, context):
             <meta content="text/html; charset=utf-8" http-equiv="content-type"/>
         </head>
         <body>
-            <div style="display: flex; flex-direction: column;">
-                <a href="/mandarin-cantonese-translator">&lt;&lt; Back</a>
-                <h1 style="margin-top: 0.25rem">{APP_NAME}</h1>
-            </div>
-            <div>
-                <a href="{GOOGLE_SPREAD_SHEET_URL}" target="_blank">Translation Config</a>
-            </div>
+            {app_heading_html_content}
             <div style="display: flex">
                 <div style="width: 50%; overflow: hidden; padding: 0 1rem 1rem; margin: 1rem; border: solid 1px #ccc;">
                     <h2>Original input</h2>
