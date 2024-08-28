@@ -5,22 +5,24 @@ import gspread
 import re
 
 from oauth2client.service_account import ServiceAccountCredentials
-from typing import List
+from typing import List, Dict
 from urllib.parse import unquote_plus
 
 
 APP_NAME = 'Mandarin Cantonese Translator'
-# DEV Secrets Name
-GOOGLE_SERVICE_ACCOUNT_SECRET_NAME = 'dev/ygtq/mandarin_cantonese_translator'
-# PROD Secrets Name
-# GOOGLE_SERVICE_ACCOUNT_SECRET_NAME = 'prod/ygtq/mandarin_cantonese_translator'
-# DEV Google Sheet
-GOOGLE_SPREAD_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1SQ9bwDUxXbU6q8njvg4wtXBdJDAp7wJskApnDuS6vYY/edit?gid=0#gid=0'
-# PROD Google Sheet
-# GOOGLE_SPREAD_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1qCKGH5uNXkfn3L6XqwUPNhTYQhHE3r7r4PGiB21aEPo/edit?gid=0#gid=0'
-GOOGLE_SHEET_NAME = 'Mappings'
-DEPLOYMENT_TARGET = 'DEV'
+DEPLOYMENT_TARGET = 'DEV'  # or 'PROD'
 IS_DEBUGGING = False
+# Secrets Name
+GOOGLE_SERVICE_ACCOUNT_SECRET_NAME = {
+    'DEV': 'dev/ygtq/mandarin_cantonese_translator',
+    'PROD': 'prod/ygtq/mandarin_cantonese_translator'
+}
+# Google Sheet
+GOOGLE_SPREAD_SHEET_URL = {
+    'DEV': 'https://docs.google.com/spreadsheets/d/1SQ9bwDUxXbU6q8njvg4wtXBdJDAp7wJskApnDuS6vYY/edit?gid=0#gid=0',
+    'PROD': 'https://docs.google.com/spreadsheets/d/1qCKGH5uNXkfn3L6XqwUPNhTYQhHE3r7r4PGiB21aEPo/edit?gid=0#gid=0'
+}
+MANDARIN_CANTONESE_MAPPING_SHEET_TITLE = 'Mappings'
 
 
 def extract_spreadsheet_id(url):
@@ -50,35 +52,49 @@ def produce_html_lines(*, input: str) -> List[str]:
     return html_lines
 
 
+def get_all_records(
+    *,
+    sheet_title: str,
+    gspread_client: gspread.client.Client
+) -> List[Dict]:
+    # Replace text using mappings specified in the Google Sheet
+    spreadsheet_url = GOOGLE_SPREAD_SHEET_URL[DEPLOYMENT_TARGET]
+    spreadsheet_id = extract_spreadsheet_id(spreadsheet_url)
+    # Access the Google Sheet by Spreadsheet ID
+    spreadsheet = gspread_client.open_by_key(spreadsheet_id)
+    # Open the worksheet by name
+    worksheet: gspread.worksheet.Worksheet = spreadsheet.worksheet(title=sheet_title)
+    # Get all records from the worksheet
+    records = worksheet.get_all_records()
+    return records
+
+
 def produce_mandarin_cantonese_replacement_outcome(
     *,
     input: str,
     gspread_client: gspread.client.Client
 ) -> str:
-        # Replace text using mappings specified in the Google Sheet
-        spreadsheet_id = extract_spreadsheet_id(GOOGLE_SPREAD_SHEET_URL)
-        # Access the Google Sheet by Spreadsheet ID
-        spreadsheet = gspread_client.open_by_key(spreadsheet_id)
-        # Open the worksheet by name
-        worksheet = spreadsheet.worksheet(GOOGLE_SHEET_NAME)
-        # Get all records from the worksheet
-        records = worksheet.get_all_records()
+    records = get_all_records(
+        sheet_title=MANDARIN_CANTONESE_MAPPING_SHEET_TITLE,
+        gspread_client=gspread_client
+    )
 
-        if IS_DEBUGGING:
-            print(f"Retrieved {len(records)} lines of Madarin Cantonese Mappings")
-            # Example:
-            # [
-            #     {'Mandarin': '早上好', 'Cantonese': '早晨'},
-            #     {'Mandarin': '现在', 'Cantonese': '依家'},
-            #     {'Mandarin': '这里', 'Cantonese': '呢度'},
-            #     {'Mandarin': '为什么', 'Cantonese': '点解'}
-            # ]
+    if IS_DEBUGGING:
+        print(f"Retrieved {len(records)} lines of Madarin Cantonese Mappings")
+        # Example:
+        # [
+        #     {'Mandarin': '早上好', 'Cantonese': '早晨'},
+        #     {'Mandarin': '现在', 'Cantonese': '依家'},
+        #     {'Mandarin': '这里', 'Cantonese': '呢度'},
+        #     {'Mandarin': '为什么', 'Cantonese': '点解'}
+        # ]
 
-        replaced_text = input
-        for mapping in records:
-            mandarin = mapping['Mandarin']
-            cantonese = mapping['Cantonese']
-            replaced_text = replaced_text.replace(mandarin, cantonese)
+    replaced_text = input
+    for mapping in records:
+        mandarin = mapping['Mandarin']
+        cantonese = mapping['Cantonese']
+        replaced_text = replaced_text.replace(mandarin, cantonese)
+    return replaced_text
 
 
 def retrieve_input(event) -> str:
@@ -109,7 +125,7 @@ def produce_app_heading_html(
     *,
     http_method: str,
 ) -> str:
-
+    spreadsheet_url = GOOGLE_SPREAD_SHEET_URL[DEPLOYMENT_TARGET]
     html = f"""
         <div style="display: flex; flex-direction: column;">
             {
@@ -135,7 +151,7 @@ def produce_app_heading_html(
             """ if DEPLOYMENT_TARGET != 'PROD' else ''
         }
         <div>
-            <a href="{GOOGLE_SPREAD_SHEET_URL}" target="_blank">Translation Config</a>
+            <a href="{spreadsheet_url}" target="_blank">Translation Config</a>
         </div>
     """
     return html
@@ -216,7 +232,8 @@ def get_gspread_client() -> gspread.client.Client:
     # Create a Secrets Manager client
     secrets_client = boto3.client('secretsmanager')
     # Retrieve the secret
-    response = secrets_client.get_secret_value(SecretId=GOOGLE_SERVICE_ACCOUNT_SECRET_NAME)
+    secret_id = GOOGLE_SERVICE_ACCOUNT_SECRET_NAME[DEPLOYMENT_TARGET]
+    response = secrets_client.get_secret_value(SecretId=secret_id)
     # Parse the secret's value as JSON
     service_account_secret = json.loads(response['SecretString'])
     
@@ -261,10 +278,6 @@ def lambda_handler(event, context):
         
         if IS_DEBUGGING:
             print(f"Parsed request body: {parsed_input}")
-        
-        original_html_lines = produce_html_lines(
-            input=parsed_input
-        )
 
         gspread_client = get_gspread_client()
         replaced_text = produce_mandarin_cantonese_replacement_outcome(
@@ -279,6 +292,9 @@ def lambda_handler(event, context):
             input=replaced_text
         )
         
+        original_html_lines = produce_html_lines(
+            input=parsed_input
+        )
         result_content = produce_replacement_outcome_html(
             app_heading_html=app_heading_html,
             original_html_lines=original_html_lines,
