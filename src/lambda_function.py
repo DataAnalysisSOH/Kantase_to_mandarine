@@ -5,6 +5,7 @@ import gspread
 import re
 
 from oauth2client.service_account import ServiceAccountCredentials
+from opencc import OpenCC
 from typing import List, Dict
 from urllib.parse import unquote_plus
 
@@ -24,6 +25,17 @@ GOOGLE_SPREAD_SHEET_URL = {
 }
 MANDARIN_CANTONESE_MAPPING_SHEET_TITLE = 'Mappings'
 SYMBOL_STANDARDIZATION_SHEET_TITLE = 'Symbols'
+
+
+def get_lambda_last_modified_timestamp(context) -> str:
+    client = boto3.client('lambda')
+
+    # Get the function's configuration
+    response = client.get_function_configuration(FunctionName=context.function_name)
+
+    # Extract the last modified time
+    last_modified = response['LastModified']
+    return last_modified
 
 
 def extract_spreadsheet_id(url):
@@ -92,9 +104,15 @@ def produce_mandarin_cantonese_replacement_outcome(
 
     replaced_text = input
     for mapping in records:
-        mandarin = mapping['Mandarin']
+        old = mapping['Mandarin']
         cantonese = mapping['Cantonese']
-        replaced_text = replaced_text.replace(mandarin, cantonese)
+        # Add a space into the replacement output to avoid chain of changes
+        # 1: 納斯拉勒 ==>【 納 斯 魯 拉 】* * 納 斯 拉 勒 * *
+        # 2: 魯拉    ==>【 盧 拉 】* * 魯 拉 * *
+        # So that output does not result 【納斯【盧拉】**魯拉**】**納斯拉勒**
+        char_list = list(cantonese)
+        new = ' '.join(char_list)
+        replaced_text = replaced_text.replace(old, new)
     return replaced_text
 
 
@@ -125,6 +143,7 @@ def retrieve_input(event) -> str:
 def produce_app_heading_html(
     *,
     http_method: str,
+    last_modified: str,
 ) -> str:
     spreadsheet_url = GOOGLE_SPREAD_SHEET_URL[DEPLOYMENT_TARGET]
     html = f"""
@@ -134,24 +153,27 @@ def produce_app_heading_html(
                 <a href="/mandarin-cantonese-translator">&lt;&lt; Back</a>
                 """ if http_method == 'POST' else ''
             }
+            <div style="display: flex; justify-content: space-between">
             <h1>
                 {APP_NAME}
                 {
                     """
-                    <span style="color: #f57e42;">(deprecated)</span>
+                    <span style="color: #f57e42;">(TESTING)</span>
                     """ if DEPLOYMENT_TARGET != 'PROD' else ''
                 }
             </h1>
+            <span>Last modified: {last_modified}</span>
+            </div>
         </div>
         {
             """
             <div style="color: #f57e42;">
-                Please use the new site with this link:
-                <a href="https://gvpun3viu9.execute-api.us-east-1.amazonaws.com/mandarin-cantonese-translator">https://gvpun3viu9.execute-api.us-east-1.amazonaws.com/mandarin-cantonese-translator</a>
+                Please use the PRODUCTION site with this 
+                <a href="https://gvpun3viu9.execute-api.us-east-1.amazonaws.com/mandarin-cantonese-translator">link</a>. Thanks.
             </div>
             """ if DEPLOYMENT_TARGET != 'PROD' else ''
         }
-        <div>
+        <div style="margin: 1rem 0;">
             <a href="{spreadsheet_url}" target="_blank">Translation Config</a>
         </div>
     """
@@ -266,6 +288,18 @@ def produce_symbol_standardization(
     return replaced_text
 
 
+def convert_to_traditional_chinese(
+    *,
+    input: str
+) -> str:
+    # Initialize the converter
+    cc = OpenCC('s2t')  # s2t means Simplified to Traditional
+
+    # Convert Simplified Chinese text to Traditional Chinese
+    traditional_text = cc.convert(input)
+    return traditional_text
+
+
 def lambda_handler(event, context):
     print (f"{APP_NAME} starts ...")
 
@@ -277,8 +311,11 @@ def lambda_handler(event, context):
     # 1. Make sure we get the HTTP method used by the requester
     print(f"HTTP method: {http_method}")
     
+    lambda_last_modified = get_lambda_last_modified_timestamp(context=context)
+
     app_heading_html = produce_app_heading_html(
-        http_method=http_method
+        http_method=http_method,
+        last_modified=lambda_last_modified,
     )
 
     if http_method == 'GET':
@@ -301,10 +338,14 @@ def lambda_handler(event, context):
         if IS_DEBUGGING:
             print(f"Parsed request body: {parsed_input}")
 
+        traditionalized_content = convert_to_traditional_chinese(
+            input=parsed_input
+        )
+
         gspread_client = get_gspread_client()
 
         symbol_standardized_content = produce_symbol_standardization(
-            input=parsed_input,
+            input=traditionalized_content,
             gspread_client=gspread_client
         )
 
