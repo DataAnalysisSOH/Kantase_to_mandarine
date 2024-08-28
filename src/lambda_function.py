@@ -23,6 +23,7 @@ GOOGLE_SPREAD_SHEET_URL = {
     'PROD': 'https://docs.google.com/spreadsheets/d/1qCKGH5uNXkfn3L6XqwUPNhTYQhHE3r7r4PGiB21aEPo/edit?gid=0#gid=0'
 }
 MANDARIN_CANTONESE_MAPPING_SHEET_TITLE = 'Mappings'
+SYMBOL_STANDARDIZATION_SHEET_TITLE = 'Symbols'
 
 
 def extract_spreadsheet_id(url):
@@ -244,6 +245,27 @@ def get_gspread_client() -> gspread.client.Client:
     return gspread_client
 
 
+def produce_symbol_standardization(
+    *,
+    input: str,
+    gspread_client: gspread.client.Client
+) -> str:
+    records = get_all_records(
+        sheet_title=SYMBOL_STANDARDIZATION_SHEET_TITLE,
+        gspread_client=gspread_client
+    )
+
+    if IS_DEBUGGING:
+        print(f"Retrieved {len(records)} lines of Symbol Standardization Mappings")
+
+    replaced_text = input
+    for mapping in records:
+        old = mapping['Lookup']
+        new = mapping['Standardization']
+        replaced_text = replaced_text.replace(old, new)
+    return replaced_text
+
+
 def lambda_handler(event, context):
     print (f"{APP_NAME} starts ...")
 
@@ -280,8 +302,14 @@ def lambda_handler(event, context):
             print(f"Parsed request body: {parsed_input}")
 
         gspread_client = get_gspread_client()
-        replaced_text = produce_mandarin_cantonese_replacement_outcome(
+
+        symbol_standardized_content = produce_symbol_standardization(
             input=parsed_input,
+            gspread_client=gspread_client
+        )
+
+        replaced_text = produce_mandarin_cantonese_replacement_outcome(
+            input=symbol_standardized_content,
             gspread_client=gspread_client,
         )
 
