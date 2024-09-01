@@ -24,7 +24,7 @@ GOOGLE_SPREAD_SHEET_URL = {
     'PROD': 'https://docs.google.com/spreadsheets/d/1qCKGH5uNXkfn3L6XqwUPNhTYQhHE3r7r4PGiB21aEPo/edit?gid=0#gid=0'
 }
 MANDARIN_CANTONESE_MAPPING_SHEET_TITLE = 'Mappings'
-SYMBOL_STANDARDIZATION_SHEET_TITLE = 'Symbols'
+SYMBOL_STANDARDIZATION_SHEET_TITLE = 'FirstPassConfig'
 
 
 def get_lambda_last_modified_timestamp(context) -> str:
@@ -282,8 +282,8 @@ def produce_symbol_standardization(
 
     replaced_text = input
     for mapping in records:
-        old = mapping['Lookup']
-        new = mapping['Standardization']
+        old = mapping['Original']
+        new = mapping['Replace']
         replaced_text = replaced_text.replace(old, new)
     return replaced_text
 
