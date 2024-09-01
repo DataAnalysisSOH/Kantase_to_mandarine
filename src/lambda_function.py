@@ -58,8 +58,6 @@ def produce_html_lines(*, input: str) -> List[str]:
     lines = input.splitlines()
     html_lines = []
     for text_line in lines:
-        if len(text_line) == 0:
-            continue
         html_line = f"<p>{text_line}</p>"
         html_lines.append(html_line)
     return html_lines
