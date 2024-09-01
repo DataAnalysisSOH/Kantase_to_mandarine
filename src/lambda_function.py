@@ -35,7 +35,9 @@ def get_lambda_last_modified_timestamp(context) -> str:
 
     # Extract the last modified time
     last_modified = response['LastModified']
-    return last_modified
+    # Convert "2024-08-30T01:14:54.000+0000" to "2024-08-30 01:14:54"
+    last_modified_readable = last_modified.replace("T", " ")[:19]
+    return last_modified_readable
 
 
 def extract_spreadsheet_id(url):
@@ -160,7 +162,7 @@ def produce_app_heading_html(
                     """ if DEPLOYMENT_TARGET != 'PROD' else ''
                 }
             </h1>
-            <span>Last modified: {last_modified}</span>
+            <span>Last modified: {last_modified} (UTC)</span>
             </div>
         </div>
         {
