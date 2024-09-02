@@ -153,16 +153,19 @@ def produce_app_heading_html(
                 <a href="/mandarin-cantonese-translator">&lt;&lt; Back</a>
                 """ if http_method == 'POST' else ''
             }
-            <div style="display: flex; justify-content: space-between">
-            <h1>
-                {APP_NAME}
-                {
-                    """
-                    <span style="color: #f57e42;">(TESTING)</span>
-                    """ if DEPLOYMENT_TARGET != 'PROD' else ''
-                }
-            </h1>
-            <span>Last modified: {last_modified} (UTC)</span>
+            <div>
+                <h1 style="line-height: 0.75;">
+                    {APP_NAME}
+                    {
+                        """
+                        <span style="color: #f57e42;">(TESTING)</span>
+                        """ if DEPLOYMENT_TARGET != 'PROD' else ''
+                    }
+                    <br>
+                    <span style="color: #999999; font-size: 12px;">
+                        System last modified: {last_modified} (UTC)
+                    </span>
+                </h1>
             </div>
         </div>
         {
