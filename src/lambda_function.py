@@ -106,14 +106,17 @@ def produce_mandarin_cantonese_replacement_outcome(
     for mapping in records:
         old = mapping['Mandarin']
         cantonese = mapping['Cantonese']
-        # Add a space into the replacement output to avoid chain of changes
+        # Add a temporary space into the replacement output to avoid chain of changes
         # 1: 納斯拉勒 ==>【 納 斯 魯 拉 】* * 納 斯 拉 勒 * *
         # 2: 魯拉    ==>【 盧 拉 】* * 魯 拉 * *
         # So that output does not result 【納斯【盧拉】**魯拉**】**納斯拉勒**
         char_list = list(cantonese)
-        new = ' '.join(char_list)
+        new = '&nbsp;'.join(char_list)
         replaced_text = replaced_text.replace(old, new)
-    return replaced_text
+
+    # remove temporary spaces
+    clean_text = replaced_text.replace('&nbsp;', '')
+    return clean_text
 
 
 def retrieve_input(event) -> str:
