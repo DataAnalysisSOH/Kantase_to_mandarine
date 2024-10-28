@@ -3,28 +3,35 @@ import boto3
 import json
 import gspread
 import re
+import os
 
+from enum import Enum
 from oauth2client.service_account import ServiceAccountCredentials
 from opencc import OpenCC
 from typing import List, Dict
 from urllib.parse import unquote_plus
 
 
-APP_NAME = 'Mandarin Cantonese Translator'
-DEPLOYMENT_TARGET = 'DEV'  # or 'PROD'
-IS_DEBUGGING = False
-# Secrets Name
-GOOGLE_SERVICE_ACCOUNT_SECRET_NAME = {
-    'DEV': 'dev/ygtq/mandarin_cantonese_translator',
-    'PROD': 'prod/ygtq/mandarin_cantonese_translator'
-}
-# Google Sheet
-GOOGLE_SPREAD_SHEET_URL = {
-    'DEV': 'https://docs.google.com/spreadsheets/d/1SQ9bwDUxXbU6q8njvg4wtXBdJDAp7wJskApnDuS6vYY/edit?gid=0#gid=0',
-    'PROD': 'https://docs.google.com/spreadsheets/d/1qCKGH5uNXkfn3L6XqwUPNhTYQhHE3r7r4PGiB21aEPo/edit?gid=0#gid=0'
-}
-MANDARIN_CANTONESE_MAPPING_SHEET_TITLE = 'Mappings'
-SYMBOL_STANDARDIZATION_SHEET_TITLE = 'FirstPassConfig'
+class Operation(Enum):
+    REPLACEMENT = 200
+    HIGHLIGHT = 400
+
+TRUTHY = ['true', '1', 't', 'y', 'yes']
+
+APP_NAME = os.environ.get('APP_NAME')
+DEPLOYMENT_TARGET = os.environ.get('DEPLOYMENT_TARGET')
+HOME_URL = os.environ.get('HOME_URL')
+PRODUCTION_SITE_URL = os.environ.get('PRODUCTION_SITE_URL')
+IS_DEBUGGING = os.environ.get('IS_DEBUGGING').lower() in TRUTHY
+GOOGLE_SERVICE_ACCOUNT_SECRET_NAME = os.environ.get('GOOGLE_SERVICE_ACCOUNT_SECRET_NAME')
+GOOGLE_SPREAD_SHEET_URL = os.environ.get('GOOGLE_SPREAD_SHEET_URL')
+MAPPING_SHEET_TITLE = os.environ.get('MAPPING_SHEET_TITLE')
+PERFORM_TRADITIONAL_CHINESE_CONVERTION = os.environ.get('PERFORM_TRADITIONAL_CHINESE_CONVERTION').lower() in TRUTHY
+PERFORM_SYMBOL_STANDARDIZATION = os.environ.get('PERFORM_SYMBOL_STANDARDIZATION').lower() in TRUTHY
+SYMBOL_STANDARDIZATION_SHEET_TITLE = os.environ.get('SYMBOL_STANDARDIZATION_SHEET_TITLE')
+OPERATION_TYPE = Operation[os.environ.get('OPERATION_TYPE')]
+LOOKUP_COLUMN_NAME = os.environ.get('LOOKUP_COLUMN_NAME')
+REPLACEMENT_COLUMN_NAME = os.environ.get('REPLACEMENT_COLUMN_NAME')
 
 
 def get_lambda_last_modified_timestamp(context) -> str:
@@ -71,7 +78,7 @@ def get_all_records(
     gspread_client: gspread.client.Client
 ) -> List[Dict]:
     # Replace text using mappings specified in the Google Sheet
-    spreadsheet_url = GOOGLE_SPREAD_SHEET_URL[DEPLOYMENT_TARGET]
+    spreadsheet_url = GOOGLE_SPREAD_SHEET_URL
     spreadsheet_id = extract_spreadsheet_id(spreadsheet_url)
     # Access the Google Sheet by Spreadsheet ID
     spreadsheet = gspread_client.open_by_key(spreadsheet_id)
@@ -82,18 +89,19 @@ def get_all_records(
     return records
 
 
-def produce_mandarin_cantonese_replacement_outcome(
+def produce_outcome(
     *,
     input: str,
-    gspread_client: gspread.client.Client
+    gspread_client: gspread.client.Client,
+    operation_type: Operation
 ) -> str:
     records = get_all_records(
-        sheet_title=MANDARIN_CANTONESE_MAPPING_SHEET_TITLE,
+        sheet_title=MAPPING_SHEET_TITLE,
         gspread_client=gspread_client
     )
 
     if IS_DEBUGGING:
-        print(f"Retrieved {len(records)} lines of Madarin Cantonese Mappings")
+        print(f"Retrieved {len(records)} lines of Mappings")
         # Example:
         # [
         #     {'Mandarin': '早上好', 'Cantonese': '早晨'},
@@ -104,15 +112,18 @@ def produce_mandarin_cantonese_replacement_outcome(
 
     replaced_text = input
     for mapping in records:
-        old = mapping['Mandarin']
-        cantonese = mapping['Cantonese']
+        lookup = mapping[LOOKUP_COLUMN_NAME]
+        if operation_type == Operation.REPLACEMENT:
+            replacement = mapping[REPLACEMENT_COLUMN_NAME]
+        elif operation_type == Operation.HIGHLIGHT:
+            replacement = f'【{lookup}】'
         # Add a temporary space into the replacement output to avoid chain of changes
         # 1: 納斯拉勒 ==>【 納 斯 魯 拉 】* * 納 斯 拉 勒 * *
         # 2: 魯拉    ==>【 盧 拉 】* * 魯 拉 * *
         # So that output does not result 【納斯【盧拉】**魯拉**】**納斯拉勒**
-        char_list = list(cantonese)
+        char_list = list(replacement)
         new = '&nbsp;'.join(char_list)
-        replaced_text = replaced_text.replace(old, new)
+        replaced_text = replaced_text.replace(lookup, new)
 
     # remove temporary spaces
     clean_text = replaced_text.replace('&nbsp;', '')
@@ -148,13 +159,14 @@ def produce_app_heading_html(
     http_method: str,
     last_modified: str,
 ) -> str:
-    spreadsheet_url = GOOGLE_SPREAD_SHEET_URL[DEPLOYMENT_TARGET]
+    spreadsheet_url = GOOGLE_SPREAD_SHEET_URL
     html = f"""
         <div style="display: flex; flex-direction: column;">
             {
-                """
-                <a href="/mandarin-cantonese-translator">&lt;&lt; Back</a>
+                f"""
+                <a href="{HOME_URL}">&lt;&lt; Back</a>
                 """ if http_method == 'POST' else ''
+                
             }
             <div>
                 <h1 style="line-height: 0.75;">
@@ -172,10 +184,10 @@ def produce_app_heading_html(
             </div>
         </div>
         {
-            """
+            f"""
             <div style="color: #f57e42;">
                 Please use the PRODUCTION site with this 
-                <a href="https://gvpun3viu9.execute-api.us-east-1.amazonaws.com/mandarin-cantonese-translator">link</a>. Thanks.
+                <a href="{PRODUCTION_SITE_URL}">link</a>. Thanks.
             </div>
             """ if DEPLOYMENT_TARGET != 'PROD' else ''
         }
@@ -184,6 +196,12 @@ def produce_app_heading_html(
         </div>
     """
     return html
+
+
+def get_action_name() -> str:
+    if OPERATION_TYPE == Operation.HIGHLIGHT:
+        return "Highlight"
+    return "Convert"
 
 
 def produce_initial_form_html(
@@ -199,9 +217,9 @@ def produce_initial_form_html(
         </head>
         <body>
             {app_heading_html}
-            <form action="/mandarin-cantonese-translator" method="post">
+            <form action="{HOME_URL}" method="post">
                 <textarea name="input_text" rows="20" cols="60"></textarea><br><br>
-                <input type="submit" value="Convert">
+                <input type="submit" value="{get_action_name()}">
             </form>
         </body>
         </html>
@@ -209,11 +227,11 @@ def produce_initial_form_html(
     return html
 
 
-def produce_replacement_outcome_html(
+def produce_outcome_html(
     *,
     app_heading_html: str,
     original_html_lines: List[str],
-    replaced_text_html_lines: List[str],
+    new_text_html_lines: List[str],
 ) -> str:
     # Return the result
     html = f"""
@@ -234,10 +252,10 @@ def produce_replacement_outcome_html(
                 </div>
             </div>
             <div style="width: 50%; overflow: hidden; padding: 0 1rem 1rem; margin: 1rem; border: solid 1px #ccc;">
-                <h2>Convert outcome</h2>
+                <h2>{get_action_name()} outcome</h2>
                 <button onclick="copyToClipboard('output')">Copy outcome</button>
                 <div id="output">
-                {''.join(replaced_text_html_lines)}
+                {''.join(new_text_html_lines)}
                 </div>
             </div>
         </div>
@@ -261,7 +279,7 @@ def get_gspread_client() -> gspread.client.Client:
     # Create a Secrets Manager client
     secrets_client = boto3.client('secretsmanager')
     # Retrieve the secret
-    secret_id = GOOGLE_SERVICE_ACCOUNT_SECRET_NAME[DEPLOYMENT_TARGET]
+    secret_id = GOOGLE_SERVICE_ACCOUNT_SECRET_NAME
     response = secrets_client.get_secret_value(SecretId=secret_id)
     # Parse the secret's value as JSON
     service_account_secret = json.loads(response['SecretString'])
@@ -344,36 +362,44 @@ def lambda_handler(event, context):
         if IS_DEBUGGING:
             print(f"Parsed request body: {parsed_input}")
 
-        traditionalized_content = convert_to_traditional_chinese(
-            input=parsed_input
-        )
+        content = ''
+        if PERFORM_TRADITIONAL_CHINESE_CONVERTION:
+            traditionalized_content = convert_to_traditional_chinese(
+                input=parsed_input
+            )
+            content = traditionalized_content
+        else:
+            content = parsed_input
 
         gspread_client = get_gspread_client()
 
-        symbol_standardized_content = produce_symbol_standardization(
-            input=traditionalized_content,
-            gspread_client=gspread_client
-        )
+        if PERFORM_SYMBOL_STANDARDIZATION:
+            symbol_standardized_content = produce_symbol_standardization(
+                input=content,
+                gspread_client=gspread_client
+            )
+            content = symbol_standardized_content
 
-        replaced_text = produce_mandarin_cantonese_replacement_outcome(
-            input=symbol_standardized_content,
+        content = produce_outcome(
+            input=content,
             gspread_client=gspread_client,
+            operation_type=OPERATION_TYPE
         )
 
         if IS_DEBUGGING:
-            print(f"Replaced outcome: {replaced_text}")
+            print(f"Final outcome: {content}")
 
-        replaced_text_html_lines = produce_html_lines(
-            input=replaced_text
+        new_html_lines = produce_html_lines(
+            input=content
         )
         
         original_html_lines = produce_html_lines(
             input=parsed_input
         )
-        result_content = produce_replacement_outcome_html(
+        result_content = produce_outcome_html(
             app_heading_html=app_heading_html,
             original_html_lines=original_html_lines,
-            replaced_text_html_lines=replaced_text_html_lines,
+            new_text_html_lines=new_html_lines,
         )
         
         return {

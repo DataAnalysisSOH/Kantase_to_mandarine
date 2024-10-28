@@ -12,6 +12,26 @@ set -e
 # complex scripts.
 set -x
 
+
+if [[ -z "${LAMBDA_NAME}" ]]; then
+  echo "Environment variable LAMBDA_NAME is not set. Please use 'export LAMBDA_NAME=<Your Lambda's Function Name>' to define"
+  echo "Default value 'mandarin-cantonese-translator' is used as the Lambda name"
+  FUNCTION_NAME="mandarin-cantonese-translator"
+else
+  echo "Lambda's function name is '${LAMBDA_NAME}'"
+  FUNCTION_NAME="${LAMBDA_NAME}"
+fi
+
+if [[ -z "${TARGET_ENV}" ]]; then
+  echo "Environment variable TARGET_ENV is not set. Please use 'export TARGET_ENV=<dev or prod>' to define"
+  echo "Default value 'dev' is used as the deployment target environment"
+  DPLY_TARGET_ENV="dev"
+else
+  echo "Deployment target environment is '${LAMBDA_NAME}'"
+  DPLY_TARGET_ENV="${TARGET_ENV}"
+fi
+
+
 # Start with a clean distribution folder
 rm -rf ./.dist/
 mkdir -p ./.dist/
@@ -27,5 +47,10 @@ zip -r translator_lambda.zip .
 
 # Update Lambda with the latest ZIP file
 aws lambda update-function-code \
-    --function-name mandarin-cantonese-translator \
+    --function-name "${LAMBDA_NAME}" \
     --zip-file fileb://translator_lambda.zip
+
+# Update Lambda with the latest configuration
+aws lambda update-function-configuration \
+    --function-name "${LAMBDA_NAME}" \
+    --environment "{\"Variables\":`cat ../config/${LAMBDA_NAME}.${TARGET_ENV}.json`}"

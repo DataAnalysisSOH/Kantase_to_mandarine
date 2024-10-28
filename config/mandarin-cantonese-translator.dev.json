@@ -1,0 +1,16 @@
+{
+    "APP_NAME": "Mandarin Cantonese Translator",
+    "HOME_URL": "/mandarin-cantonese-translator",
+    "DEPLOYMENT_TARGET": "DEV",
+    "PRODUCTION_SITE_URL": "https://gvpun3viu9.execute-api.us-east-1.amazonaws.com/mandarin-cantonese-translator",
+    "IS_DEBUGGING": "False",
+    "GOOGLE_SERVICE_ACCOUNT_SECRET_NAME": "dev/ygtq/mandarin_cantonese_translator",
+    "GOOGLE_SPREAD_SHEET_URL": "https://docs.google.com/spreadsheets/d/1SQ9bwDUxXbU6q8njvg4wtXBdJDAp7wJskApnDuS6vYY/edit?gid=0#gid=0",
+    "MAPPING_SHEET_TITLE": "Mappings",
+    "PERFORM_TRADITIONAL_CHINESE_CONVERTION": "True",
+    "PERFORM_SYMBOL_STANDARDIZATION": "True",
+    "SYMBOL_STANDARDIZATION_SHEET_TITLE": "FirstPassConfig",
+    "OPERATION_TYPE": "REPLACEMENT",
+    "LOOKUP_COLUMN_NAME": "Mandarin",
+    "REPLACEMENT_COLUMN_NAME": "Cantonese"
+}
