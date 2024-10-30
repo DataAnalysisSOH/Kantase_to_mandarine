@@ -7,6 +7,7 @@
     "GOOGLE_SERVICE_ACCOUNT_SECRET_NAME": "dev/ygtq/mandarin_cantonese_translator",
     "GOOGLE_SPREAD_SHEET_URL": "https://docs.google.com/spreadsheets/d/1d6Tp0DzoDP6Ml2ORybxQQn3dTpKJeh6g-midjEOB7Io/edit?gid=0#gid=0",
     "MAPPING_SHEET_TITLE": "Mappings",
+    "HIGHLIGHTER_SHEET_TITLE": "Highlighter",
     "PERFORM_TRADITIONAL_CHINESE_CONVERTION": "True",
     "PERFORM_SYMBOL_STANDARDIZATION": "False",
     "SYMBOL_STANDARDIZATION_SHEET_TITLE": "",

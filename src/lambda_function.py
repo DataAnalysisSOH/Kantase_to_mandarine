@@ -26,6 +26,7 @@ IS_DEBUGGING = os.environ.get('IS_DEBUGGING').lower() in TRUTHY
 GOOGLE_SERVICE_ACCOUNT_SECRET_NAME = os.environ.get('GOOGLE_SERVICE_ACCOUNT_SECRET_NAME')
 GOOGLE_SPREAD_SHEET_URL = os.environ.get('GOOGLE_SPREAD_SHEET_URL')
 MAPPING_SHEET_TITLE = os.environ.get('MAPPING_SHEET_TITLE')
+HIGHLIGHTER_SHEET_TITLE = os.environ.get('HIGHLIGHTER_SHEET_TITLE')
 PERFORM_TRADITIONAL_CHINESE_CONVERTION = os.environ.get('PERFORM_TRADITIONAL_CHINESE_CONVERTION').lower() in TRUTHY
 PERFORM_SYMBOL_STANDARDIZATION = os.environ.get('PERFORM_SYMBOL_STANDARDIZATION').lower() in TRUTHY
 SYMBOL_STANDARDIZATION_SHEET_TITLE = os.environ.get('SYMBOL_STANDARDIZATION_SHEET_TITLE')
@@ -99,6 +100,13 @@ def produce_outcome(
         sheet_title=MAPPING_SHEET_TITLE,
         gspread_client=gspread_client
     )
+    if operation_type == Operation.HIGHLIGHT:
+        highlighter = get_all_records(
+            sheet_title=HIGHLIGHTER_SHEET_TITLE,
+            gspread_client=gspread_client
+        )
+        highlighter_start = highlighter[0]['Start']
+        highlighter_end = highlighter[0]['End']
 
     if IS_DEBUGGING:
         print(f"Retrieved {len(records)} lines of Mappings")
@@ -116,7 +124,7 @@ def produce_outcome(
         if operation_type == Operation.REPLACEMENT:
             replacement = mapping[REPLACEMENT_COLUMN_NAME]
         elif operation_type == Operation.HIGHLIGHT:
-            replacement = f'【{lookup}】'
+            replacement = f'{highlighter_start}{lookup}{highlighter_end}'
         # Add a temporary space into the replacement output to avoid chain of changes
         # 1: 納斯拉勒 ==>【 納 斯 魯 拉 】* * 納 斯 拉 勒 * *
         # 2: 魯拉    ==>【 盧 拉 】* * 魯 拉 * *
