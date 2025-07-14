@@ -27,7 +27,7 @@ if [[ -z "${TARGET_ENV}" ]]; then
   echo "Default value 'dev' is used as the deployment target environment"
   DPLY_TARGET_ENV="dev"
 else
-  echo "Deployment target environment is '${LAMBDA_NAME}'"
+  echo "Deployment target environment is '${TARGET_ENV}'"
   DPLY_TARGET_ENV="${TARGET_ENV}"
 fi
 
@@ -46,11 +46,21 @@ cd .dist
 zip -r translator_lambda.zip .
 
 # Update Lambda with the latest ZIP file
+read "confirm?Do you want to continue deploying function '${FUNCTION_NAME}'? (Y/N): "
+if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+  echo "Deployment cancelled."
+  exit 0
+fi
 aws lambda update-function-code \
-    --function-name "${LAMBDA_NAME}" \
+    --function-name "${FUNCTION_NAME}" \
     --zip-file fileb://translator_lambda.zip
 
 # Update Lambda with the latest configuration
+read "confirm?Do you want to continue deploying configuration changes for function '${FUNCTION_NAME}'? (Y/N): "
+if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+  echo "Deployment cancelled."
+  exit 0
+fi
 aws lambda update-function-configuration \
-    --function-name "${LAMBDA_NAME}" \
-    --environment "{\"Variables\":`cat ../config/${LAMBDA_NAME}.${TARGET_ENV}.json`}"
+    --function-name "${FUNCTION_NAME}" \
+    --environment "{\"Variables\":`cat ../config/${FUNCTION_NAME}.${DPLY_TARGET_ENV}.json`}"

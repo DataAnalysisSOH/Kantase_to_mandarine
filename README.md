@@ -22,6 +22,13 @@ This is an application that translates some of the Mandarine wording into the HK
 Run the following command from the project root to deploy.
 
 ```zsh
+# Define function name to which code is deployed
+export LAMBDA_NAME="mandarin-cantonese-translator"
+
+# Define target environment for loading different config
+export TARGET_ENV="dev"
+
+# Deploy to AWS account
 ./scripts/deploy.sh
 ```
 

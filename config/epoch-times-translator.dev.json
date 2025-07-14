@@ -1,0 +1,17 @@
+{
+    "APP_NAME": "Epoch Times Translator",
+    "HOME_URL": "/epoch-times-translator",
+    "DEPLOYMENT_TARGET": "DEV",
+    "PRODUCTION_SITE_URL": "https://gvpun3viu9.execute-api.us-east-1.amazonaws.com/epoch-times-translator",
+    "IS_DEBUGGING": "False",
+    "GOOGLE_SERVICE_ACCOUNT_SECRET_NAME": "prod/ygtq/epoch_times_translator",
+    "GOOGLE_SPREAD_SHEET_URL": "https://docs.google.com/spreadsheets/d/1a5JYEmGlKIBEStTrd1pOMvVjp1ezBV-4F_saYN6SL0M/edit?gid=0#gid=0",
+    "MAPPING_SHEET_TITLE": "Mappings",
+    "HIGHLIGHTER_SHEET_TITLE": "",
+    "PERFORM_TRADITIONAL_CHINESE_CONVERTION": "True",
+    "PERFORM_SYMBOL_STANDARDIZATION": "True",
+    "SYMBOL_STANDARDIZATION_SHEET_TITLE": "FirstPassConfig",
+    "OPERATION_TYPE": "REPLACEMENT",
+    "LOOKUP_COLUMN_NAME": "Lookup",
+    "REPLACEMENT_COLUMN_NAME": "Replacement"
+}
